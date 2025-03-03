@@ -1,1 +1,61 @@
-/.env
+.vercel
+
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Bower dependency directory
+bower_components/
+
+# IDE specific files (VSCode, JetBrains, etc.)
+.vscode/
+.idea/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Output directories
+/dist
+/build
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# SASS cache
+.sass-cache/
+
+# Package-locks and Yarn-lock
+package-lock.json
+yarn.lock
+
+# TypeScript files
+*.tsbuildinfo
