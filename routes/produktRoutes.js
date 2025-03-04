@@ -21,7 +21,7 @@ if (process.env.CLOUDINARY_URL) {
   });
 }
 
-// Configure multer pentru a stoca temporar fișierele
+// Configure multer pentru a stoca temporar fișierele în folderul "uploads"
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, 'uploads/');
@@ -33,8 +33,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 /**
- * @desc  Create or update product and upload file to Cloudinary
- * @route POST /api/produkte
+ * @desc    Create or update product and upload file to Cloudinary
+ * @route   POST /api/produkte
  */
 router.post('/', upload.single('pdfDatei'), async (req, res) => {
   try {
@@ -42,13 +42,18 @@ router.post('/', upload.single('pdfDatei'), async (req, res) => {
     let fileUrl = '';
 
     if (req.file) {
+      // Extragem extensia fișierului și determinăm resource_type:
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      const resourceType = ext === '.zip' ? 'raw' : 'auto';
+
       const result = await cloudinary.uploader.upload(req.file.path, {
         folder: 'Produktsuche',
-        resource_type: 'auto'
+        resource_type: resourceType
       });
       fileUrl = result.secure_url;
     }
 
+    // Verifică dacă produsul există deja
     let produkt = await Produkt.findOne({ artikelnummer });
 
     if (produkt) {
@@ -115,7 +120,7 @@ router.get('/stats', async (req, res) => {
 });
 
 /**
- * @desc    Retrieve products with filtering, sorting, pagination
+ * @desc    Retrieve products with filtering, sorting, and pagination
  * @route   GET /api/produkte
  */
 router.get('/', async (req, res) => {
