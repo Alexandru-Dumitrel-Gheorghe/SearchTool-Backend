@@ -2,6 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 const connectDB = require('./config/db');
 const produktRoutes = require('./routes/produktRoutes');
 
@@ -18,7 +19,7 @@ app.use(express.json());
 app.use('/api/produkte', produktRoutes);
 
 // Servire fișiere statice (PDF etc.)
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Pornire server
 const PORT = process.env.PORT || 5000;
