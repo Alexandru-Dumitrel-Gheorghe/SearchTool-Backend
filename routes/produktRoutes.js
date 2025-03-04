@@ -9,7 +9,8 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-// Configure Cloudinary: use CLOUDINARY_URL if available; otherwise use individual variables.
+// Configure Cloudinary: if CLOUDINARY_URL is set, it will be used automatically;
+// otherwise, use individual variables.
 if (process.env.CLOUDINARY_URL) {
   cloudinary.config({ secure: true });
 } else {
@@ -21,7 +22,7 @@ if (process.env.CLOUDINARY_URL) {
   });
 }
 
-// Configure multer to save files temporarily in the "uploads" folder
+// Configure multer to temporarily store files in the "uploads" folder
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, 'uploads/');
@@ -32,20 +33,30 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// @desc    Create or update product and upload PDF to Cloudinary
+// @desc    Create or update product and upload file to Cloudinary
 // @route   POST /api/produkte
 router.post('/', upload.single('pdfDatei'), async (req, res) => {
   try {
     const { artikelnummer, beschreibung } = req.body;
-    let pdfPfad = '';
-    
+    let fileUrl = '';
+
     if (req.file) {
-      // Upload file to Cloudinary in the "Produktsuche" folder
+      // Determine the resource type based on the mimetype of the file
+      let resourceType;
+      if (req.file.mimetype === 'application/pdf') {
+        resourceType = 'raw';
+      } else if (req.file.mimetype.startsWith('image/')) {
+        resourceType = 'image';
+      } else {
+        resourceType = 'auto';
+      }
+
+      // Upload the file to Cloudinary in the "Produktsuche" folder
       const result = await cloudinary.uploader.upload(req.file.path, {
         folder: 'Produktsuche',
-        resource_type: 'auto'
+        resource_type: resourceType
       });
-      pdfPfad = result.secure_url;
+      fileUrl = result.secure_url;
     }
 
     // Check if the product already exists
@@ -54,7 +65,7 @@ router.post('/', upload.single('pdfDatei'), async (req, res) => {
     if (produkt) {
       // Update existing product
       produkt.beschreibung = beschreibung || produkt.beschreibung;
-      if (pdfPfad) produkt.pdfPfad = pdfPfad;
+      if (fileUrl) produkt.pdfPfad = fileUrl;
       await produkt.save();
       return res.json({ success: true, message: 'Produkt aktualisiert', produkt });
     } else {
@@ -62,7 +73,7 @@ router.post('/', upload.single('pdfDatei'), async (req, res) => {
       produkt = new Produkt({
         artikelnummer,
         beschreibung,
-        pdfPfad
+        pdfPfad: fileUrl
       });
       await produkt.save();
       return res.json({ success: true, message: 'Neues Produkt erstellt', produkt });
