@@ -1,3 +1,4 @@
+// backend/models/Produkt.js
 const mongoose = require('mongoose');
 
 const produktSchema = new mongoose.Schema({
@@ -11,8 +12,11 @@ const produktSchema = new mongoose.Schema({
   },
   pdfPfad: {
     type: String
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now // Folosit pentru chart / sortare
   }
 });
 
-// Exportă modelul Produkt
 module.exports = mongoose.model('Produkt', produktSchema);
