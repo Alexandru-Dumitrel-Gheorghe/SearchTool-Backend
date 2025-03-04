@@ -5,10 +5,12 @@ const multer = require('multer');
 const path = require('path');
 const cloudinary = require('cloudinary').v2;
 const dotenv = require('dotenv');
+const bufferToDataURL = require('buffer-to-data-url'); // convert file buffer to data URL
 
 dotenv.config();
 
-// Configure Cloudinary: Dacă CLOUDINARY_URL este setat, va fi folosit automat; altfel, se vor folosi variabile individuale.
+// Configure Cloudinary: if CLOUDINARY_URL is set, it will be used automatically;
+// otherwise, use individual variables.
 if (process.env.CLOUDINARY_URL) {
   cloudinary.config({ secure: true });
 } else {
@@ -20,18 +22,11 @@ if (process.env.CLOUDINARY_URL) {
   });
 }
 
-// Configure multer pentru a stoca temporar fișierele în folderul "uploads"
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
-});
+// Use memory storage so we can access the file buffer directly.
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// @desc    Create or update product and upload file to Cloudinary (always using resource_type: 'auto')
+// @desc    Create or update product and upload file to Cloudinary
 // @route   POST /api/produkte
 router.post('/', upload.single('pdfDatei'), async (req, res) => {
   try {
@@ -39,25 +34,30 @@ router.post('/', upload.single('pdfDatei'), async (req, res) => {
     let fileUrl = '';
 
     if (req.file) {
-      // Folosește resource_type: 'auto' indiferent de tipul fișierului
-      const result = await cloudinary.uploader.upload(req.file.path, {
+      // Convert the file buffer to a data URL
+      const dataUrl = bufferToDataURL(req.file.mimetype, req.file.buffer);
+      // Upload the file to Cloudinary in the "Produktsuche" folder,
+      // using resource_type: 'auto' to let Cloudinary auto-detect the file type,
+      // and override the filename with the original name.
+      const result = await cloudinary.uploader.upload(dataUrl, {
         folder: 'Produktsuche',
-        resource_type: 'auto'
+        resource_type: 'auto',
+        filename_override: req.file.originalname
       });
       fileUrl = result.secure_url;
     }
 
-    // Verifică dacă produsul există deja
+    // Check if the product already exists
     let produkt = await Produkt.findOne({ artikelnummer });
 
     if (produkt) {
-      // Actualizează produsul existent
+      // Update existing product
       produkt.beschreibung = beschreibung || produkt.beschreibung;
       if (fileUrl) produkt.pdfPfad = fileUrl;
       await produkt.save();
       return res.json({ success: true, message: 'Produkt aktualisiert', produkt });
     } else {
-      // Creează un nou produs
+      // Create a new product
       produkt = new Produkt({
         artikelnummer,
         beschreibung,
