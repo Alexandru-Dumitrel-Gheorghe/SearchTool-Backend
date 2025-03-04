@@ -1,4 +1,3 @@
-// backend/models/Produkt.js
 const mongoose = require('mongoose');
 
 const produktSchema = new mongoose.Schema({
@@ -15,5 +14,5 @@ const produktSchema = new mongoose.Schema({
   }
 });
 
-// AICI, la final:
+// Exportă modelul Produkt
 module.exports = mongoose.model('Produkt', produktSchema);
