@@ -47,7 +47,7 @@ router.post('/', upload.single('pdfDatei'), async (req, res) => {
         req.file.mimetype === 'application/pdf' ||
         req.file.originalname.toLowerCase().endsWith('.pdf')
       ) {
-        resourceType = 'raw';
+        resourceType = 'pdf';
       } else if (req.file.mimetype.startsWith('image/')) {
         resourceType = 'image';
       } else {
