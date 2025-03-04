@@ -9,8 +9,7 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-// Configure Cloudinary: if CLOUDINARY_URL is set, it will be used automatically;
-// otherwise, use individual variables.
+// Configure Cloudinary: use CLOUDINARY_URL if available; otherwise use individual variables.
 if (process.env.CLOUDINARY_URL) {
   cloudinary.config({ secure: true });
 } else {
@@ -22,7 +21,7 @@ if (process.env.CLOUDINARY_URL) {
   });
 }
 
-// Configure multer to temporarily store files in the "uploads" folder
+// Configure multer to save files temporarily in the "uploads" folder
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, 'uploads/');
@@ -39,18 +38,16 @@ router.post('/', upload.single('pdfDatei'), async (req, res) => {
   try {
     const { artikelnummer, beschreibung } = req.body;
     let fileUrl = '';
-
+    
     if (req.file) {
       // Determine the resource type based on the mimetype of the file
-      let resourceType;
+      let resourceType = 'auto';
       if (req.file.mimetype === 'application/pdf') {
         resourceType = 'raw';
       } else if (req.file.mimetype.startsWith('image/')) {
         resourceType = 'image';
-      } else {
-        resourceType = 'auto';
       }
-
+      
       // Upload the file to Cloudinary in the "Produktsuche" folder
       const result = await cloudinary.uploader.upload(req.file.path, {
         folder: 'Produktsuche',
