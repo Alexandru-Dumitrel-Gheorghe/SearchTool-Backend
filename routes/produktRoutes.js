@@ -41,11 +41,23 @@ router.post('/', upload.single('pdfDatei'), async (req, res) => {
     let fileUrl = '';
 
     if (req.file) {
-      // Upload file to Cloudinary in the "Produktsuche" folder
-      // Using resource_type: 'auto' to allow automatic detection of the file type.
+      // Determine the resource type: force PDF files to 'raw' by checking mimetype and file extension
+      let resourceType;
+      if (
+        req.file.mimetype === 'application/pdf' ||
+        req.file.originalname.toLowerCase().endsWith('.pdf')
+      ) {
+        resourceType = 'raw';
+      } else if (req.file.mimetype.startsWith('image/')) {
+        resourceType = 'image';
+      } else {
+        resourceType = 'auto';
+      }
+
+      // Upload the file to Cloudinary in the "Produktsuche" folder
       const result = await cloudinary.uploader.upload(req.file.path, {
         folder: 'Produktsuche',
-        resource_type: 'auto'
+        resource_type: resourceType
       });
       fileUrl = result.secure_url;
     }
