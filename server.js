@@ -18,7 +18,7 @@ app.use(express.json());
 // Rute
 app.use('/api/produkte', produktRoutes);
 
-// Static files (dacă vrei să servești ceva din /uploads)
+// Serve static files din uploads (dacă este necesar)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const PORT = process.env.PORT || 5000;

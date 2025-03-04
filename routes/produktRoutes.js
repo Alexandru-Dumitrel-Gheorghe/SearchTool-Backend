@@ -42,7 +42,6 @@ router.post('/', upload.single('pdfDatei'), async (req, res) => {
     let fileUrl = '';
 
     if (req.file) {
-      // resource_type: 'auto' pentru a încărca orice tip de fișier
       const result = await cloudinary.uploader.upload(req.file.path, {
         folder: 'Produktsuche',
         resource_type: 'auto'
@@ -50,17 +49,14 @@ router.post('/', upload.single('pdfDatei'), async (req, res) => {
       fileUrl = result.secure_url;
     }
 
-    // Verifică dacă produsul există deja
     let produkt = await Produkt.findOne({ artikelnummer });
 
     if (produkt) {
-      // Actualizează produsul existent
       produkt.beschreibung = beschreibung || produkt.beschreibung;
       if (fileUrl) produkt.pdfPfad = fileUrl;
       await produkt.save();
       return res.json({ success: true, message: 'Produkt aktualisiert', produkt });
     } else {
-      // Creează un nou produs
       produkt = new Produkt({
         artikelnummer,
         beschreibung,
@@ -76,24 +72,65 @@ router.post('/', upload.single('pdfDatei'), async (req, res) => {
 });
 
 /**
- * @desc    Retrieve products with optional filtering, sorting, pagination
+ * @desc    Return stats about products
+ * @route   GET /api/produkte/stats
+ */
+router.get('/stats', async (req, res) => {
+  try {
+    const totalProducts = await Produkt.countDocuments({});
+    const withPDF = await Produkt.countDocuments({
+      pdfPfad: { $exists: true, $ne: '' }
+    });
+
+    const last7days = new Date();
+    last7days.setDate(last7days.getDate() - 6);
+
+    const productsByDay = await Produkt.aggregate([
+      { $match: { createdAt: { $gte: last7days } } },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const statsChart = productsByDay.map(item => ({
+      date: item._id,
+      count: item.count
+    }));
+
+    res.json({
+      totalProducts,
+      withPDF,
+      statsChart
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching stats' });
+  }
+});
+
+/**
+ * @desc    Retrieve products with filtering, sorting, pagination
  * @route   GET /api/produkte
- * @query   searchTerm, hasPDF, sort, order, page, limit
  */
 router.get('/', async (req, res) => {
   try {
     const {
       page = 1,
-      limit = 999999,       // poți seta alt default
-      sort = 'createdAt',   // criteriu default
-      order = 'desc',       // ordinea default
-      searchTerm = '',      // filtrare text
-      hasPDF = ''           // 'true' / 'false' / ''
+      limit = 999999,
+      sort = 'createdAt',
+      order = 'desc',
+      searchTerm = '',
+      hasPDF = ''
     } = req.query;
 
     const query = {};
 
-    // Filtru searchTerm -> caută în artikelnummer sau beschreibung
     if (searchTerm) {
       query.$or = [
         { artikelnummer: { $regex: searchTerm, $options: 'i' } },
@@ -101,7 +138,6 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    // Filtru hasPDF
     if (hasPDF === 'true') {
       query.pdfPfad = { $exists: true, $ne: '' };
     } else if (hasPDF === 'false') {
@@ -114,7 +150,6 @@ router.get('/', async (req, res) => {
     const skip = (page - 1) * limit;
     const sortOption = order === 'asc' ? sort : `-${sort}`;
 
-    // Query + sort + skip + limit
     const [produkte, totalCount] = await Promise.all([
       Produkt.find(query)
         .sort(sortOption)
@@ -123,7 +158,6 @@ router.get('/', async (req, res) => {
       Produkt.countDocuments(query)
     ]);
 
-    // Returnăm obiect cu produkte și totalCount
     return res.json({
       produkte,
       totalCount
@@ -165,52 +199,6 @@ router.delete('/:artikelnummer', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Fehler beim Löschen des Produkts' });
-  }
-});
-
-/**
- * @desc    Return stats about products
- * @route   GET /api/produkte/stats
- */
-router.get('/stats', async (req, res) => {
-  try {
-    const totalProducts = await Produkt.countDocuments({});
-    const withPDF = await Produkt.countDocuments({
-      pdfPfad: { $exists: true, $ne: '' }
-    });
-
-    // Ultimele 7 zile
-    const last7days = new Date();
-    last7days.setDate(last7days.getDate() - 6);
-
-    // Group by zi
-    const productsByDay = await Produkt.aggregate([
-      { $match: { createdAt: { $gte: last7days } } },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
-          },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
-
-    // Transformăm datele în array { date, count }
-    const statsChart = productsByDay.map(item => ({
-      date: item._id,
-      count: item.count
-    }));
-
-    res.json({
-      totalProducts,
-      withPDF,
-      statsChart
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error fetching stats' });
   }
 });
 
