@@ -4,11 +4,27 @@ const router = express.Router();
 const Produkt = require('../models/Produkt');
 const multer = require('multer');
 const path = require('path');
+const cloudinary = require('cloudinary').v2;
+const dotenv = require('dotenv');
 
-// Configurare multer pentru salvarea PDF-urilor
+dotenv.config();
+
+// Configure Cloudinary: use CLOUDINARY_URL if available; otherwise use individual variables.
+if (process.env.CLOUDINARY_URL) {
+  cloudinary.config({ secure: true });
+} else {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true
+  });
+}
+
+// Configure multer to save files temporarily in the "uploads" folder
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // unde se vor salva fișierele
+    cb(null, 'uploads/');
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + path.extname(file.originalname));
@@ -16,29 +32,33 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// @desc    Creare sau actualizare produs + încărcare PDF
+// @desc    Create or update product and upload PDF to Cloudinary
 // @route   POST /api/produkte
 router.post('/', upload.single('pdfDatei'), async (req, res) => {
   try {
     const { artikelnummer, beschreibung } = req.body;
-
-    // Verificăm dacă s-a încărcat un fișier
     let pdfPfad = '';
+    
     if (req.file) {
-      pdfPfad = req.file.path; // calea fișierului în folderul 'uploads'
+      // Upload file to Cloudinary in the "Produktsuche" folder
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'Produktsuche',
+        resource_type: 'auto'
+      });
+      pdfPfad = result.secure_url;
     }
 
-    // Verificăm dacă există deja produsul
+    // Check if the product already exists
     let produkt = await Produkt.findOne({ artikelnummer });
 
     if (produkt) {
-      // Actualizează produsul existent
+      // Update existing product
       produkt.beschreibung = beschreibung || produkt.beschreibung;
       if (pdfPfad) produkt.pdfPfad = pdfPfad;
       await produkt.save();
       return res.json({ success: true, message: 'Produkt aktualisiert', produkt });
     } else {
-      // Creează un nou produs
+      // Create a new product
       produkt = new Produkt({
         artikelnummer,
         beschreibung,
@@ -53,7 +73,7 @@ router.post('/', upload.single('pdfDatei'), async (req, res) => {
   }
 });
 
-// @desc    Obține toate produsele
+// @desc    Retrieve all products
 // @route   GET /api/produkte
 router.get('/', async (req, res) => {
   try {
@@ -65,7 +85,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// @desc    Obține un produs după Artikelnummer
+// @desc    Retrieve product by artikelnummer
 // @route   GET /api/produkte/:artikelnummer
 router.get('/:artikelnummer', async (req, res) => {
   try {
@@ -80,7 +100,7 @@ router.get('/:artikelnummer', async (req, res) => {
   }
 });
 
-// @desc    Șterge un produs după Artikelnummer
+// @desc    Delete product by artikelnummer
 // @route   DELETE /api/produkte/:artikelnummer
 router.delete('/:artikelnummer', async (req, res) => {
   try {
