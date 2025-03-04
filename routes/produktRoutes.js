@@ -1,3 +1,4 @@
+// backend/routes/produktRoutes.js
 const express = require('express');
 const router = express.Router();
 const Produkt = require('../models/Produkt');
@@ -5,9 +6,13 @@ const multer = require('multer');
 const path = require('path');
 const cloudinary = require('cloudinary').v2;
 const dotenv = require('dotenv');
-const bufferToDataURL = require('buffer-to-data-url'); // convert file buffer to data URL
 
 dotenv.config();
+
+// Helper function: converts a buffer to a data URL.
+function bufferToDataURL(mimetype, buffer) {
+  return `data:${mimetype};base64,${buffer.toString('base64')}`;
+}
 
 // Configure Cloudinary: if CLOUDINARY_URL is set, it will be used automatically;
 // otherwise, use individual variables.
@@ -22,7 +27,7 @@ if (process.env.CLOUDINARY_URL) {
   });
 }
 
-// Use memory storage so we can access the file buffer directly.
+// Use multer memory storage so we can access the file buffer directly.
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
@@ -34,11 +39,10 @@ router.post('/', upload.single('pdfDatei'), async (req, res) => {
     let fileUrl = '';
 
     if (req.file) {
-      // Convert the file buffer to a data URL
+      // Convert file buffer to a data URL
       const dataUrl = bufferToDataURL(req.file.mimetype, req.file.buffer);
-      // Upload the file to Cloudinary in the "Produktsuche" folder,
-      // using resource_type: 'auto' to let Cloudinary auto-detect the file type,
-      // and override the filename with the original name.
+
+      // Upload file to Cloudinary in the "Produktsuche" folder using resource_type 'auto'
       const result = await cloudinary.uploader.upload(dataUrl, {
         folder: 'Produktsuche',
         resource_type: 'auto',
