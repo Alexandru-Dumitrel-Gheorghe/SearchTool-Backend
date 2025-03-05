@@ -21,12 +21,10 @@ if (process.env.CLOUDINARY_URL) {
   });
 }
 
-// Configure multer for temporary file storage in "uploads" folder
+// Configure multer pentru a stoca temporar fișierele în folderul "uploads"
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // Ensure the "uploads" folder exists:
-    const uploadDir = 'uploads/';
-    cb(null, uploadDir);
+    cb(null, 'uploads/');
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + path.extname(file.originalname));
@@ -44,7 +42,7 @@ router.post('/', upload.single('pdfDatei'), async (req, res) => {
     let fileUrl = '';
 
     if (req.file) {
-      // Determine resource_type based on file extension
+      // Extragem extensia fișierului și determinăm resource_type:
       const ext = path.extname(req.file.originalname).toLowerCase();
       const resourceType = ext === '.zip' ? 'raw' : 'auto';
 
@@ -55,7 +53,7 @@ router.post('/', upload.single('pdfDatei'), async (req, res) => {
       fileUrl = result.secure_url;
     }
 
-    // Check if product already exists
+    // Verifică dacă produsul există deja
     let produkt = await Produkt.findOne({ artikelnummer });
 
     if (produkt) {
