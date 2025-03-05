@@ -15,25 +15,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Routes
+// Rute
 app.use('/api/produkte', produktRoutes);
 
-// Serve static files from 'uploads' if needed
+// Serve static files din uploads (dacă este necesar)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-/**
- * @desc   Return mock memory info for demonstration
- * @route  GET /api/system/memory
- */
-app.get('/api/system/memory', (req, res) => {
-  // In a real scenario, you'd fetch actual memory data or from your system.
-  // For now, we just return mock data: total=16, used=8
-  const total = 16;
-  const used = 8;
-  return res.json({ total, used });
-});
-
-// Start the server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server läuft auf Port ${PORT}`);
