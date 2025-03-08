@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 const connectDB = require('./config/db');
 const produktRoutes = require('./routes/produktRoutes');
+const hidriveRoutes = require('./routes/hidriveRoutes'); // new route
 
 dotenv.config();
 connectDB();
@@ -15,10 +16,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Rute
+// Existing routes
 app.use('/api/produkte', produktRoutes);
 
-// Serve static files din uploads (dacă este necesar)
+// New route for HiDrive OAuth
+app.use('/api/hidrive', hidriveRoutes);
+
+// Serve static files if needed
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const PORT = process.env.PORT || 5000;
